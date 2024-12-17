@@ -1,0 +1,61 @@
+import requests
+from bs4 import BeautifulSoup
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def fetch_page_content(url_to_fetch):
+    """Fetches the content of a webpage and returns the text."""
+    try:
+        response = requests.get(url_to_fetch, timeout=10)  # Set a timeout for the request
+        response.raise_for_status()  # Raise an error for bad responses
+        html_parser = BeautifulSoup(response.text, 'html.parser')
+        formatted_text = html_parser.get_text(separator=' ', strip=True)  # Clean and format text
+        return formatted_text
+    except requests.exceptions.SSLError as ssl_error:
+        logging.error(f"SSL error occurred: {ssl_error}")
+    except requests.exceptions.RequestException as request_error:
+        logging.error(f"Request error occurred: {request_error}")
+    except Exception as general_error:
+        logging.error(f"An error occurred: {general_error}")
+
+def locate_relevant_info(search_term, collected_data):
+    """Locates relevant information based on the user's search term."""
+    matches_found = []
+    search_term_lower = search_term.lower()  # Convert search term to lowercase once
+    for url_to_fetch, content in collected_data.items():
+        if search_term_lower in content.lower():  # Simple keyword matching
+            matches_found.append((url_to_fetch, content))
+    return matches_found
+
+def initiate_scraping():
+    # List of URLs to scrape
+    urls_to_visit = [
+        "https://www.washington.edu/",
+        "https://www.stanford.edu/",
+        "https://und.edu/"
+    ]
+
+    # Scrape the websites and store the content
+    collected_data = {}
+    for url_to_fetch in urls_to_visit:
+        content = fetch_page_content(url_to_fetch)
+        if content:
+            logging.info(f"Successfully scraped content from {url_to_fetch}")
+            collected_data[url_to_fetch] = content  # Store the content in a dictionary
+
+    # Example query
+    user_query = input("Enter your query: ")
+    results = locate_relevant_info(user_query, collected_data)
+
+    # Display the results
+    if results:
+        print("\nResults found:")
+        for url_to_fetch, content in results:
+            print(f"\nFrom {url_to_fetch}:\n{content[:500]}...")  # Preview first 500 characters
+    else:
+        print("No results found for your query.")
+
+if __name__ == "__main__":
+    initiate_scraping()
